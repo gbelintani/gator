@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gbelintani/gator/internal/database"
@@ -73,5 +74,26 @@ func handlerListFeed(s *state, _ command) error {
 		fmt.Printf("User: %s\n", f.UserName)
 	}
 
+	return nil
+}
+
+func hanlderBrowse(s *state, cmd command) error {
+	limit := 2
+	if len(cmd.args) == 1 {
+		limitParsed, err := strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return fmt.Errorf("not valid number: %w", err)
+		}
+		limit = limitParsed
+	}
+
+	posts, err := s.db.GetPosts(context.Background(), int32(limit))
+	if err != nil {
+		return fmt.Errorf("error getting posts: %w", err)
+	}
+
+	for i, item := range posts {
+		fmt.Printf(" %d) %s\n", i, item.Title)
+	}
 	return nil
 }

@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gbelintani/gator/internal/config"
 	"github.com/gbelintani/gator/internal/database"
 	"github.com/gbelintani/gator/internal/rss"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
@@ -43,11 +45,26 @@ func scrapeFeeds(s *state) error {
 		return fmt.Errorf("error fetching: %w", err)
 	}
 
-	fmt.Printf("RSS for: %s (%s)\n", next.Name, next.Url)
-	fmt.Printf("Title: %s\n", res.Channel.Title)
-	for i, item := range res.Channel.Item {
-		fmt.Printf(" %d) %s\n", i, item.Title)
+	fmt.Printf("\nSaving from: %s\n", res.Channel.Title)
+	for _, item := range res.Channel.Item {
+		pubDate, _ := time.Parse(time.RFC3339Nano, item.PubDate)
+
+		post, err := s.db.CreatePost(context.Background(),
+			database.CreatePostParams{
+				ID:          uuid.New(),
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+				Title:       item.Title,
+				Description: sql.NullString{String: item.Description, Valid: true},
+				Url:         item.Link,
+				PublishedAt: pubDate,
+				FeedID:      next.ID,
+			})
+		if err != nil {
+			fmt.Printf("SAVED(%v): %s\n", post.ID, item.Title)
+		}
 	}
+	fmt.Printf("Doen Saving from: %s\n", res.Channel.Title)
 
 	return nil
 }
@@ -80,6 +97,7 @@ func main() {
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", middlewareLoggedIn(handlerUserFollowing))
 	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	cmds.register("browse", hanlderBrowse)
 
 	args := os.Args
 	if len(args) < 2 {
