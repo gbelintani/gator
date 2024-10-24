@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		panic("error reading config")
 	}
-	s := state{
+	s := &state{
 		config: &c,
 	}
 
@@ -34,7 +34,7 @@ func main() {
 	cmdS := args[1]
 	cmdArgs := args[2:]
 
-	err = cmds.run(&s, command{
+	err = cmds.run(s, command{
 		name: cmdS,
 		args: cmdArgs,
 	})
@@ -43,19 +43,4 @@ func main() {
 		os.Exit(1)
 	}
 
-}
-
-func handlerLogin(s *state, cmd command) error {
-	if len(cmd.args) != 1 {
-		return fmt.Errorf("username is required")
-	}
-
-	u := cmd.args[0]
-	err := s.config.SetUser(u)
-	if err != nil {
-		return fmt.Errorf("could not set user: %w", err)
-	}
-
-	fmt.Printf("User %s set!\n", u)
-	return nil
 }
