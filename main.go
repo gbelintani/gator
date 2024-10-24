@@ -1,13 +1,17 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
 	"github.com/gbelintani/gator/internal/config"
+	"github.com/gbelintani/gator/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type state struct {
+	db     *database.Queries
 	config *config.Config
 }
 
@@ -16,14 +20,21 @@ func main() {
 	if err != nil {
 		panic("error reading config")
 	}
+	db, err := sql.Open("postgres", c.DbURL)
+	if err != nil {
+		panic("error openning db connection")
+	}
+	dbQueries := database.New(db)
 	s := &state{
 		config: &c,
+		db:     dbQueries,
 	}
 
 	cmds := commands{
 		commands: map[string]func(*state, command) error{},
 	}
 	cmds.register("login", handlerLogin)
+	cmds.register("register", handlerRegister)
 
 	args := os.Args
 	if len(args) < 2 {
