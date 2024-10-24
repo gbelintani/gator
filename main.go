@@ -8,6 +8,7 @@ import (
 
 	"github.com/gbelintani/gator/internal/config"
 	"github.com/gbelintani/gator/internal/database"
+	"github.com/gbelintani/gator/internal/rss"
 	_ "github.com/lib/pq"
 )
 
@@ -24,7 +25,31 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 		}
 		return handler(s, c, usr)
 	}
+}
 
+func scrapeFeeds(s *state) error {
+	next, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("error get next: %w", err)
+	}
+
+	err = s.db.MarkFeedFetched(context.Background(), next.ID)
+	if err != nil {
+		return fmt.Errorf("error marking as fetched: %w", err)
+	}
+
+	res, err := rss.FetchFeed(context.Background(), next.Url)
+	if err != nil {
+		return fmt.Errorf("error fetching: %w", err)
+	}
+
+	fmt.Printf("RSS for: %s (%s)\n", next.Name, next.Url)
+	fmt.Printf("Title: %s\n", res.Channel.Title)
+	for i, item := range res.Channel.Item {
+		fmt.Printf(" %d) %s\n", i, item.Title)
+	}
+
+	return nil
 }
 
 func main() {

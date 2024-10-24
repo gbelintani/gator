@@ -6,18 +6,25 @@ import (
 	"time"
 
 	"github.com/gbelintani/gator/internal/database"
-	"github.com/gbelintani/gator/internal/rss"
 	"github.com/google/uuid"
 )
 
-func handlerAgg(s *state, _ command) error {
-	feed, err := rss.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("could not fetch feed: %w", err)
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("wrong args")
 	}
 
-	fmt.Printf("Feed found: %v\n", feed)
-	return nil
+	interval, err := time.ParseDuration(cmd.args[0])
+	if err != nil {
+		return fmt.Errorf("error on parsing duration: %w", err)
+	}
+
+	fmt.Printf("Collecting feeds every %v", interval)
+
+	ticker := time.NewTicker(interval)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 }
 
 func handlerAddFeed(s *state, cmd command, usr database.User) error {
