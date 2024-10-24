@@ -20,14 +20,9 @@ func handlerAgg(s *state, _ command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, usr database.User) error {
 	if len(cmd.args) != 2 {
 		return fmt.Errorf("wrong args for add feed")
-	}
-
-	usr, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("could not find user %s:%w", s.config.CurrentUserName, err)
 	}
 
 	feed, err := s.db.CreateFeed(context.Background(),

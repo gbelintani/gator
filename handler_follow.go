@@ -9,14 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, usr database.User) error {
 	if len(cmd.args) != 1 {
 		return fmt.Errorf("wrong args for follow")
-	}
-
-	usr, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error get user: %w", err)
 	}
 
 	url := cmd.args[0]
@@ -43,12 +38,7 @@ func handlerFollow(s *state, cmd command) error {
 	return nil
 }
 
-func handlerUserFollowing(s *state, cmd command) error {
-	usr, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error get user: %w", err)
-	}
-
+func handlerUserFollowing(s *state, cmd command, usr database.User) error {
 	follows, err := s.db.GetFeedFollowsForUser(context.Background(), usr.ID)
 	if err != nil {
 		return fmt.Errorf("error get follows: %w", err)
@@ -59,5 +49,23 @@ func handlerUserFollowing(s *state, cmd command) error {
 		fmt.Printf(" - %s\n", f.FeedName)
 	}
 
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, usr database.User) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("wrong args")
+	}
+
+	err := s.db.DeleteFollow(context.Background(),
+		database.DeleteFollowParams{
+			UserID: usr.ID,
+			Url:    cmd.args[0],
+		})
+	if err != nil {
+		return fmt.Errorf("error deleting follows: %w", err)
+	}
+
+	fmt.Printf("%s unfollowed\n", cmd.args[0])
 	return nil
 }

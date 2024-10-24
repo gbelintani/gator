@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -13,6 +14,17 @@ import (
 type state struct {
 	db     *database.Queries
 	config *config.Config
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+	return func(s *state, c command) error {
+		usr, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
+		if err != nil {
+			return fmt.Errorf("error get user: %w", err)
+		}
+		return handler(s, c, usr)
+	}
+
 }
 
 func main() {
@@ -38,10 +50,11 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerListUsers)
 	cmds.register("agg", handlerAgg)
-	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerListFeed)
-	cmds.register("follow", handlerFollow)
-	cmds.register("following", handlerUserFollowing)
+	cmds.register("follow", middlewareLoggedIn(handlerFollow))
+	cmds.register("following", middlewareLoggedIn(handlerUserFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 
 	args := os.Args
 	if len(args) < 2 {
